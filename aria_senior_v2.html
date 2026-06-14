@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
@@ -1382,7 +1382,7 @@ function parseRappelRecurrent(msg){
 }
 
 // Enrichir intercepterNote pour les récurrents
-const _intercepterNoteOrig = intercepterNote;
+// fix boucle infinie supprime
 function intercepterNote(msg){
   const recurrent = parseRappelRecurrent(msg);
   if(recurrent && recurrent.texte){
@@ -1677,3 +1677,4 @@ updateTrialBanner();
 
 </body>
 </html>
+
