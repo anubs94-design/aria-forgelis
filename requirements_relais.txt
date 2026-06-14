@@ -2,3 +2,4 @@
 uvicorn
 httpx
 python-dotenv
+anthropic
