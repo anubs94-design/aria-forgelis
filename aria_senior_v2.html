@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
@@ -1382,7 +1382,7 @@ function parseRappelRecurrent(msg){
 }
 
 // Enrichir intercepterNote pour les récurrents
-
+const _intercepterNoteOrig = intercepterNote;
 function intercepterNote(msg){
   const recurrent = parseRappelRecurrent(msg);
   if(recurrent && recurrent.texte){
@@ -1395,7 +1395,7 @@ function intercepterNote(msg){
     speak('Rappel récurrent programmé pour ' + desc + ' à ' + recurrent.heure);
     return true;
   }
-  return false;
+  return _intercepterNoteOrig(msg);
 }
 
 // ════════════════════════════════════════════
@@ -1677,4 +1677,3 @@ updateTrialBanner();
 
 </body>
 </html>
-
