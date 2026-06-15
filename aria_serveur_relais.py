@@ -40,3 +40,4 @@ async def ask(body: dict):
 @app.post("/bienvenue")
 async def bienvenue(body: dict):
     return {"ok": True}
+
