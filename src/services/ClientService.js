@@ -1,19 +1,18 @@
-import * as Crypto from 'expo-crypto';
 import { StorageService } from './StorageService';
+
+function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
 
 export const ClientService = {
   async getOrCreateClientId() {
     let id = await StorageService.getClientId();
     if (!id) {
-      const bytes = await Crypto.getRandomBytesAsync(16);
-      const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
-      id = [
-        hex.slice(0, 8),
-        hex.slice(8, 12),
-        '4' + hex.slice(13, 16),
-        ((parseInt(hex[16], 16) & 0x3) | 0x8).toString(16) + hex.slice(17, 20),
-        hex.slice(20, 32),
-      ].join('-');
+      id = generateUUID();
       await StorageService.saveClientId(id);
     }
     return id;

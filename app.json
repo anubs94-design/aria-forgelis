@@ -1,25 +1,36 @@
 {
   "expo": {
-    "name": "aria-senior2",
+    "name": "Aria Senior",
     "slug": "aria-senior2",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0A0A0F"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.forgedis.ariasenior",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Aria a besoin du microphone pour vous ecouter.",
+        "NSLocationWhenInUseUsageDescription": "Aria utilise votre position pour la meteo locale."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0A0A0F"
       },
-      "package": "com.anubs94.ariasenior2"
+      "package": "com.forgedis.ariasenior",
+      "permissions": [
+        "RECORD_AUDIO",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "INTERNET"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -28,9 +39,6 @@
       "eas": {
         "projectId": "d956056b-c20d-4f28-8f84-82c4efa607a5"
       }
-    },
-    "plugins": [
-      "expo-status-bar"
-    ]
+    }
   }
 }
