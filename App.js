@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Platform,
+  TextInput,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
@@ -18,6 +19,7 @@ const AGENT_TOKEN = 'f259bf284425082d68c23006e8d2be047ac5ddd29c5539ae93dc2c4c34e
 export default function App() {
   const [status, setStatus] = useState('disconnected');
   const [logs, setLogs] = useState([]);
+  const [taskText, setTaskText] = useState('');
   const ws = useRef(null);
 
   const addLog = useCallback((message) => {
@@ -87,6 +89,11 @@ export default function App() {
           addLog(`Resultat commande: ${JSON.stringify(data)}`);
           break;
 
+        case 'task_result':
+          const r = data.result || {};
+          addLog(`Tache terminee [${r.statut}]: ${r.message || '(pas de message)'}`);
+          break;
+
         default:
           addLog(`Message recu (type=${data.type}): ${JSON.stringify(data)}`);
       }
@@ -142,6 +149,17 @@ export default function App() {
   const sendSearchYoutube = useCallback(() => {
     sendCommand('search_youtube', 'chat mignon');
   }, [sendCommand]);
+
+  const sendTask = useCallback(() => {
+    if (ws.current && status === 'connected' && taskText.trim().length > 0) {
+      const msg = { type: 'task', task: taskText.trim() };
+      ws.current.send(JSON.stringify(msg));
+      addLog(`Tache envoyee: ${taskText.trim()}`);
+      setTaskText('');
+    } else if (status !== 'connected') {
+      addLog("Impossible d\'envoyer: pas connecte.");
+    }
+  }, [status, taskText, addLog]);
 
   const statusColor = {
     disconnected: '#888888',
@@ -216,6 +234,25 @@ export default function App() {
         </TouchableOpacity>
       </View>
 
+      <View style={styles.taskInputContainer}>
+        <TextInput
+          style={styles.taskInput}
+          value={taskText}
+          onChangeText={setTaskText}
+          placeholder="Dis a Aria ce que tu veux faire..."
+          placeholderTextColor="#666666"
+          editable={status === 'connected'}
+          multiline
+        />
+        <TouchableOpacity
+          style={[styles.button, styles.buttonSend]}
+          onPress={sendTask}
+          disabled={status !== 'connected' || taskText.trim().length === 0}
+        >
+          <Text style={styles.buttonText}>Envoyer</Text>
+        </TouchableOpacity>
+      </View>
+
       <Text style={styles.logsTitle}>Logs :</Text>
       <ScrollView style={styles.logsContainer}>
         {logs.map((log, idx) => (
@@ -283,6 +320,22 @@ const styles = StyleSheet.create({
   },
   buttonCommand: {
     backgroundColor: '#FF9500',
+  },
+  taskInputContainer: {
+    marginBottom: 16,
+  },
+  taskInput: {
+    backgroundColor: '#1a1a1f',
+    color: '#ffffff',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    minHeight: 60,
+    marginBottom: 8,
+    textAlignVertical: 'top',
+  },
+  buttonSend: {
+    backgroundColor: '#34C759',
   },
   buttonText: {
     color: '#ffffff',
