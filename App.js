@@ -267,6 +267,7 @@ export default function App() {
         >
           <Text style={styles.buttonText}>YouTube chat</Text>
         </TouchableOpacity>
+
       </View>
 
       <View style={styles.taskInputContainer}>
