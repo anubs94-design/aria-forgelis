@@ -8,6 +8,7 @@ import {
   Platform,
   TextInput,
 } from 'react-native';
+import { Audio } from 'expo-av';
 import { StatusBar } from 'expo-status-bar';
 
 const SERVER_HOST = '192.168.1.31';
@@ -93,6 +94,9 @@ export default function App() {
 
         case 'task_result': {
           const r = data.result || {};
+          if (r.audio) {
+              jouerAudio(r.audio);
+            }
           if (r.statut === 'needs_help' && r.cible === 'choix_fichiers' && r.donnees && r.donnees.fichiers) {
             setFileChoices(r.donnees.fichiers);
             setPendingContext(null);
@@ -170,6 +174,22 @@ export default function App() {
   const sendSearchYoutube = useCallback(() => {
     sendCommand('search_youtube', 'chat mignon');
   }, [sendCommand]);
+
+  const jouerAudio = useCallback(async (base64Audio) => {
+      try {
+        const { sound } = await Audio.Sound.createAsync(
+          { uri: `data:audio/mp3;base64,${base64Audio}` }
+        );
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (status.didJustFinish) {
+            sound.unloadAsync();
+          }
+        });
+        await sound.playAsync();
+      } catch (e) {
+        addLog(`Erreur lecture audio: ${e}`);
+      }
+    }, [addLog]);
 
   const sendOpenFile = useCallback((chemin, nom) => {
     if (ws.current && status === 'connected') {
