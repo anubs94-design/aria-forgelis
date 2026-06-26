@@ -83,15 +83,13 @@ async def transcribe(body: dict):
         return {"erreur": "audio_vide"}
 
     payload = {
-        "config": {
-            "encoding": "AAC",
-            "sampleRateHertz": 44100,
-            "languageCode": langue,
-        },
-        "audio": {
-            "content": audio_b64,
-        },
-    }
+    "config": {
+        "languageCode": langue,
+    },
+    "audio": {
+        "content": audio_b64,
+    },
+}
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         r = await client.post(
