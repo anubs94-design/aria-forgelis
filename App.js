@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { Audio } from 'expo-av';
 import { StatusBar } from 'expo-status-bar';
+import { Switch } from 'react-native';
+import { useEffect } from 'react';
 
 const SERVER_HOST = '192.168.1.31';
 const SERVER_PORT = 8765;
@@ -23,6 +25,9 @@ export default function App() {
   const [taskText, setTaskText] = useState('');
   const [pendingContext, setPendingContext] = useState(null);
   const [fileChoices, setFileChoices] = useState(null);
+  const [voixActive, setVoixActive] = useState(true);
+  const voixActiveRef = useRef(true);
+  useEffect(() => { voixActiveRef.current = voixActive; }, [voixActive]);
   const ws = useRef(null);
 
   const addLog = useCallback((message) => {
@@ -94,7 +99,7 @@ export default function App() {
 
         case 'task_result': {
           const r = data.result || {};
-          if (data.audio) {
+          if (data.audio && voixActiveRef.current) {
               jouerAudio(data.audio);
             }
           if (r.statut === 'needs_help' && r.cible === 'choix_fichiers' && r.donnees && r.donnees.fichiers) {
@@ -243,6 +248,14 @@ export default function App() {
       <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
         <Text style={styles.statusText}>{statusLabel}</Text>
       </View>
+      <View style={styles.voixToggleContainer}>
+        <Text style={styles.voixToggleLabel}>Voix d Aria</Text>
+        <Switch
+          value={voixActive}
+          onValueChange={setVoixActive}
+          trackColor={{ false: "#444", true: "#34C759" }}
+        />
+      </View>
 
       <Text style={styles.serverInfo}>{SERVER_URL}</Text>
 
@@ -357,6 +370,18 @@ const styles = StyleSheet.create({
   },
   statusBadge: {
     alignSelf: 'center',
+    marginBottom: 10,
+  voixToggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  voixToggleLabel: {
+    color: '#cccccc',
+    fontSize: 13,
+    marginRight: 8,
+  },
     paddingVertical: 8,
     paddingHorizontal: 20,
     borderRadius: 20,
