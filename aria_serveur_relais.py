@@ -1,4 +1,4 @@
-﻿import os
+import os
 import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -41,3 +41,28 @@ async def ask(body: dict):
 async def bienvenue(body: dict):
     return {"ok": True}
 
+
+PROXY_TOKEN = os.environ.get("ARIA_PROXY_TOKEN", "")
+
+
+@app.post("/vision")
+async def vision(body: dict):
+    token_recu = body.get("token", "")
+    if not PROXY_TOKEN or token_recu != PROXY_TOKEN:
+        return {"erreur": "token_invalide"}
+    if not CLAUDE_KEY:
+        return {"erreur": "cle_manquante"}
+    payload = body.get("payload", {})
+    if not payload:
+        return {"erreur": "payload_vide"}
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        r = await client.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": CLAUDE_KEY,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            },
+            json=payload,
+        )
+    return r.json()
