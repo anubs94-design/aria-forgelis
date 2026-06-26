@@ -1,6 +1,6 @@
 // src/screens/MainScreen.js
 // Ecran principal Aria Senior. Gere l'etat React et orchestre les
-// services WebSocket/Audio (logique reseau dans src/services/).
+// services WebSocket/Audio/Micro (logique reseau dans src/services/).
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
@@ -13,7 +13,15 @@ import {
   Switch,
   StatusBar,
   Platform,
+  Alert,
 } from "react-native";
+import {
+  useAudioRecorder,
+  useAudioRecorderState,
+  AudioModule,
+  RecordingPresets,
+  setAudioModeAsync,
+} from "expo-audio";
 
 import {
   createConnection,
@@ -24,11 +32,14 @@ import {
   sendTask as wsSendTask,
 } from "../services/WebSocketService";
 import { jouerAudio } from "../services/AudioService";
+import { transcrireAudio } from "../services/MicroService";
+import { StorageService } from "../services/StorageService";
 
 const SERVER_HOST = "192.168.1.31";
 const SERVER_PORT = 8765;
 const SERVER_URL = "wss://" + SERVER_HOST + ":" + SERVER_PORT;
 const AGENT_TOKEN = "f259bf284425082d68c23006e8d2be047ac5ddd29c5539ae93dc2c4c34ed1853";
+const PROXY_TOKEN = "aria_1bcbb653f5fd462c4ba2243f4bce9f48b6a657ba966ace5e5fe7429540cdd014";
 
 export default function MainScreen() {
   const [status, setStatus] = useState("disconnected");
@@ -37,12 +48,38 @@ export default function MainScreen() {
   const [pendingContext, setPendingContext] = useState(null);
   const [fileChoices, setFileChoices] = useState(null);
   const [voixActive, setVoixActive] = useState(true);
+  const [langue, setLangue] = useState("fr-FR");
+  const [transcription, setTranscription] = useState(false);
   const voixActiveRef = useRef(voixActive);
   const socketRef = useRef(null);
+
+  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorderState = useAudioRecorderState(audioRecorder);
 
   useEffect(() => {
     voixActiveRef.current = voixActive;
   }, [voixActive]);
+
+  useEffect(() => {
+    (async () => {
+      const status = await AudioModule.requestRecordingPermissionsAsync();
+      if (!status.granted) {
+        Alert.alert("Permission requise", "Le micro est necessaire pour parler a Aria.");
+      }
+      await setAudioModeAsync({
+        playsInSilentMode: true,
+        allowsRecording: true,
+      });
+    })();
+  }, []);
+
+  useEffect(() => {
+    StorageService.getProfile().then((profile) => {
+      if (profile && profile.langue) {
+        setLangue(profile.langue);
+      }
+    });
+  }, []);
 
   const addLog = useCallback((message) => {
     const time = new Date().toLocaleTimeString();
@@ -117,13 +154,47 @@ export default function MainScreen() {
     setPendingContext(null);
   }, [status, addLog]);
 
-  const sendTask = useCallback(() => {
-    const reset = wsSendTask(socketRef.current, status, taskText, pendingContext, addLog);
+  const sendTask = useCallback((texteOverride) => {
+    const texte = texteOverride !== undefined ? texteOverride : taskText;
+    const reset = wsSendTask(socketRef.current, status, texte, pendingContext, addLog);
     if (reset) {
       setTaskText("");
       setPendingContext(null);
     }
   }, [status, taskText, pendingContext, addLog]);
+
+  const demarrerEnregistrement = useCallback(async () => {
+    try {
+      await audioRecorder.prepareToRecordAsync();
+      audioRecorder.record();
+      addLog("Enregistrement demarre...");
+    } catch (e) {
+      addLog("Erreur demarrage micro: " + e.message);
+    }
+  }, [audioRecorder, addLog]);
+
+  const arreterEnregistrement = useCallback(async () => {
+    try {
+      await audioRecorder.stop();
+      const uri = audioRecorder.uri;
+      addLog("Enregistrement termine. Transcription en cours...");
+      setTranscription(true);
+
+      const texte = await transcrireAudio(uri, langue, PROXY_TOKEN, addLog);
+
+      setTranscription(false);
+
+      if (texte) {
+        addLog("Transcrit : " + texte);
+        sendTask(texte);
+      } else {
+        addLog("Transcription vide ou echouee.");
+      }
+    } catch (e) {
+      setTranscription(false);
+      addLog("Erreur arret micro: " + e.message);
+    }
+  }, [audioRecorder, langue, addLog, sendTask]);
 
   const statusColor =
     {
@@ -207,6 +278,25 @@ export default function MainScreen() {
         </TouchableOpacity>
       </View>
 
+      <TouchableOpacity
+        style={[
+          styles.micButton,
+          recorderState.isRecording && styles.micButtonActive,
+          transcription && styles.micButtonTranscribing,
+        ]}
+        onPressIn={demarrerEnregistrement}
+        onPressOut={arreterEnregistrement}
+        disabled={status !== "connected" || transcription}
+      >
+        <Text style={styles.micButtonText}>
+          {transcription
+            ? "Transcription..."
+            : recorderState.isRecording
+            ? "Relachez pour envoyer"
+            : "Maintenez pour parler"}
+        </Text>
+      </TouchableOpacity>
+
       <View style={styles.taskInputContainer}>
         {fileChoices && (
           <View style={styles.pendingBanner}>
@@ -241,7 +331,7 @@ export default function MainScreen() {
         />
         <TouchableOpacity
           style={[styles.button, styles.buttonSend]}
-          onPress={sendTask}
+          onPress={() => sendTask()}
           disabled={status !== "connected" || taskText.trim().length === 0}
         >
           <Text style={styles.buttonText}>Envoyer</Text>
@@ -326,6 +416,24 @@ const styles = StyleSheet.create({
   },
   buttonCommand: {
     backgroundColor: "#FF9500",
+  },
+  micButton: {
+    backgroundColor: "#34C759",
+    borderRadius: 12,
+    paddingVertical: 18,
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  micButtonActive: {
+    backgroundColor: "#FF3B30",
+  },
+  micButtonTranscribing: {
+    backgroundColor: "#FFA500",
+  },
+  micButtonText: {
+    color: "#ffffff",
+    fontWeight: "bold",
+    fontSize: 16,
   },
   taskInputContainer: {
     marginBottom: 16,
