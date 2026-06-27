@@ -54,6 +54,7 @@ export default function MainScreen() {
   const [fileChoices, setFileChoices] = useState(null);
   const [voixActive, setVoixActive] = useState(true);
   const [vocalActif, setVocalActif] = useState(true);
+  const [langue, setLangue] = useState("fr-FR");
   const [ecouteActive, setEcouteActive] = useState(false);
   const voixActiveRef = useRef(voixActive);
   const socketRef = useRef(null);
@@ -298,7 +299,7 @@ export default function MainScreen() {
               : "Maintenez pour parler"}
           </Text>
         </TouchableOpacity>
-      )}>
+      )}
 
       <View style={styles.taskInputContainer}>
         {fileChoices && (
