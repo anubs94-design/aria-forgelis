@@ -248,6 +248,7 @@ export default function MainScreen() {
 
   return (
     <View style={styles.container}>
+      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
       <StatusBar style="light" />
       <Text style={styles.title}>Aria Senior - Test WebSocket</Text>
 
@@ -414,6 +415,8 @@ export default function MainScreen() {
           <Text style={styles.buttonText}>Envoyer</Text>
         </TouchableOpacity>
       </View>
+
+      </ScrollView>
 
       <Text style={styles.logsTitle}>Logs :</Text>
       <ScrollView style={styles.logsContainer}>
