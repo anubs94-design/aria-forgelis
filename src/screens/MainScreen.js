@@ -354,7 +354,6 @@ export default function MainScreen() {
               <Text style={styles.buttonText}>Effacer</Text>
             </TouchableOpacity>
           </View>
-        </View>
 
         <TouchableOpacity
           style={styles.docSendButton}
@@ -371,6 +370,7 @@ export default function MainScreen() {
             <Text style={styles.explicationTitle}>Aria explique :</Text>
             <Text style={styles.explicationText}>{explicationDocument}</Text>
           </View>
+        </View>
         )}
       )}
 
