@@ -41,7 +41,7 @@ import {
   arreterEcoute,
 } from "../services/MicroService";
 import { StorageService } from "../services/StorageService";
-import { prendrePhotoDocument } from "../services/DocumentService";
+import { prendrePhotoDocument, analyserDocument } from "../services/DocumentService";
 
 const SERVER_HOST = "192.168.1.31";
 const SERVER_PORT = 8765;
@@ -55,6 +55,8 @@ export default function MainScreen() {
   const [pendingContext, setPendingContext] = useState(null);
   const [fileChoices, setFileChoices] = useState(null);
   const [photoDocument, setPhotoDocument] = useState(null);
+  const [explicationDocument, setExplicationDocument] = useState(null);
+  const [analyseEnCours, setAnalyseEnCours] = useState(false);
   const [voixActive, setVoixActive] = useState(true);
   const [vocalActif, setVocalActif] = useState(true);
   const [langue, setLangue] = useState("fr-FR");
@@ -208,8 +210,21 @@ export default function MainScreen() {
     const resultat = await prendrePhotoDocument(addLog);
     if (resultat) {
       setPhotoDocument(resultat);
+      setExplicationDocument(null);
     }
   }, [addLog]);
+
+  const envoyerDocumentAAria = useCallback(async () => {
+    if (!photoDocument || !photoDocument.base64) return;
+    setAnalyseEnCours(true);
+    const texte = await analyserDocument(photoDocument.base64, addLog);
+    setAnalyseEnCours(false);
+    if (texte) {
+      setExplicationDocument(texte);
+    } else {
+      Alert.alert("Erreur", "Aria n'a pas pu analyser ce document. Reessayez.");
+    }
+  }, [photoDocument, addLog]);
 
   const statusColor =
     {
@@ -331,12 +346,32 @@ export default function MainScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.photoActionButton, styles.photoActionClear]}
-              onPress={() => setPhotoDocument(null)}
+              onPress={() => {
+                setPhotoDocument(null);
+                setExplicationDocument(null);
+              }}
             >
               <Text style={styles.buttonText}>Effacer</Text>
             </TouchableOpacity>
           </View>
         </View>
+
+        <TouchableOpacity
+          style={styles.docSendButton}
+          onPress={envoyerDocumentAAria}
+          disabled={analyseEnCours}
+        >
+          <Text style={styles.buttonText}>
+            {analyseEnCours ? "Aria lit le document..." : "Envoyer a Aria"}
+          </Text>
+        </TouchableOpacity>
+
+        {explicationDocument && (
+          <View style={styles.explicationContainer}>
+            <Text style={styles.explicationTitle}>Aria explique :</Text>
+            <Text style={styles.explicationText}>{explicationDocument}</Text>
+          </View>
+        )}
       )}
 
       <View style={styles.taskInputContainer}>
@@ -503,6 +538,32 @@ const styles = StyleSheet.create({
   },
   photoActionClear: {
     backgroundColor: "#444444",
+  },
+  docSendButton: {
+    backgroundColor: "#34C759",
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginTop: 10,
+  },
+  explicationContainer: {
+    backgroundColor: "#1a2a1f",
+    borderLeftWidth: 3,
+    borderLeftColor: "#34C759",
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 12,
+  },
+  explicationTitle: {
+    color: "#34C759",
+    fontWeight: "bold",
+    fontSize: 13,
+    marginBottom: 6,
+  },
+  explicationText: {
+    color: "#ffffff",
+    fontSize: 14,
+    lineHeight: 20,
   },
   micButton: {
     backgroundColor: "#34C759",

@@ -64,3 +64,82 @@ export async function prendrePhotoDocument(addLog) {
     return null;
   }
 }
+
+// === BRIQUE 2 : envoi de la photo au proxy vision pour analyse ===
+
+const PROXY_URL = "https://aria-forgelis.onrender.com/vision";
+const PROXY_TOKEN = "COLLE_TON_PROXY_TOKEN_ICI";
+
+const PROMPT_ASSISTANT_DOCUMENT =
+  "Tu es Aria, assistante vocale intelligente pour seniors et personnes en " +
+  "situation de handicap. L'utilisateur te montre une photo d'un courrier, " +
+  "formulaire ou document administratif.\n\n" +
+  "TON ROLE :\n" +
+  "1. Identifie le document (qui l'envoie, de quoi ca parle).\n" +
+  "2. Explique en 2-3 phrases SIMPLES ce qu'on lui demande, sans jargon.\n" +
+  "3. Indique s'il y a une echeance ou une urgence.\n" +
+  "4. Propose une aide concrete (repondre en ligne, dicter une reponse...).\n\n" +
+  "Reponds TOUJOURS en francais, chaleureux et clair. Si la photo est trop " +
+  "floue ou illisible, dis-le simplement et demande de reprendre la photo.";
+
+// Envoie l'image (base64) au proxy vision, retourne le texte d'explication
+// ou null en cas d'erreur (avec log).
+export async function analyserDocument(base64, addLog) {
+  try {
+    if (addLog) addLog("Envoi du document a Aria...");
+
+    const payload = {
+      model: "claude-sonnet-4-6",
+      max_tokens: 1024,
+      system: [{ type: "text", text: PROMPT_ASSISTANT_DOCUMENT }],
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "image",
+              source: {
+                type: "base64",
+                media_type: "image/jpeg",
+                data: base64,
+              },
+            },
+            {
+              type: "text",
+              text: "Voici la photo du document. Explique-moi simplement de quoi il s'agit.",
+            },
+          ],
+        },
+      ],
+    };
+
+    const response = await fetch(PROXY_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: PROXY_TOKEN, payload: payload }),
+    });
+
+    const data = await response.json();
+
+    if (data.erreur) {
+      if (addLog) addLog("Erreur Aria: " + data.erreur);
+      return null;
+    }
+
+    const texte =
+      data.content && data.content[0] && data.content[0].text
+        ? data.content[0].text
+        : null;
+
+    if (!texte) {
+      if (addLog) addLog("Reponse vide ou inattendue d'Aria.");
+      return null;
+    }
+
+    if (addLog) addLog("Aria a explique le document.");
+    return texte;
+  } catch (e) {
+    if (addLog) addLog("Erreur envoi document: " + e.message);
+    return null;
+  }
+}
