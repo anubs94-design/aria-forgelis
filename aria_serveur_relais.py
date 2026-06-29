@@ -1,6 +1,6 @@
 import os
 import httpx
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -14,7 +14,7 @@ COMPORTEMENT :
 - Reponds TOUJOURS en francais, maximum 2-3 phrases courtes
 - Tu as acces a toutes les fonctions : rappels, emails, questions, calculs, meteo, actualites
 - Pour les RAPPELS : reponds "Rappel enregistre ! Je vous previens a [heure] pour [sujet]."
-- Pour les EMAILS : aide a les rediger directement
+- Pour les EMAILS : aide a rediger directement
 - Pour les QUESTIONS : reponds simplement et clairement
 - JAMAIS "je ne peux pas", "dans la version complete", "je comprends"
 - Utilise le prenom de l utilisateur quand tu le connais
@@ -41,9 +41,7 @@ async def ask(body: dict):
 async def bienvenue(body: dict):
     return {"ok": True}
 
-
 PROXY_TOKEN = os.environ.get("ARIA_PROXY_TOKEN", "")
-
 
 @app.post("/vision")
 async def vision(body: dict):
@@ -66,8 +64,8 @@ async def vision(body: dict):
             json=payload,
         )
     return r.json()
-GOOGLE_SPEECH_KEY = os.environ.get("ARIA_GOOGLE_SPEECH_KEY", "")
 
+GOOGLE_SPEECH_KEY = os.environ.get("ARIA_GOOGLE_SPEECH_KEY", "")
 
 @app.post("/transcribe")
 async def transcribe(body: dict):
@@ -83,13 +81,13 @@ async def transcribe(body: dict):
         return {"erreur": "audio_vide"}
 
     payload = {
-    "config": {
-        "languageCode": langue,
-    },
-    "audio": {
-        "content": audio_b64,
-    },
-}
+        "config": {
+            "languageCode": langue,
+        },
+        "audio": {
+            "content": audio_b64,
+        },
+    }
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         r = await client.post(
@@ -108,3 +106,49 @@ async def transcribe(body: dict):
 
     texte = resultats[0]["alternatives"][0]["transcript"]
     return {"texte": texte}
+
+
+# ===================================================================
+# RELAIS WEBSOCKET (Aria disponible partout, pas que sur le wifi local)
+# ===================================================================
+# Le PC (agent.py) et le telephone se connectent tous les deux a cette
+# route avec le MEME token (ARIA_PROXY_TOKEN) et un role different.
+# Render ne fait que transmettre les messages de l'un a l'autre, sans
+# aucune logique metier (zero stockage, relais transparent comme /vision).
+
+relais_connexions = {}
+
+@app.websocket("/relais")
+async def relais(websocket: WebSocket):
+    token = websocket.query_params.get("token", "")
+    role = websocket.query_params.get("role", "")
+
+    if not PROXY_TOKEN or token != PROXY_TOKEN:
+        await websocket.close(code=4001)
+        return
+    if role not in ("agent", "phone"):
+        await websocket.close(code=4002)
+        return
+
+    await websocket.accept()
+
+    if token not in relais_connexions:
+        relais_connexions[token] = {"agent": None, "phone": None}
+    relais_connexions[token][role] = websocket
+
+    autre_role = "phone" if role == "agent" else "agent"
+
+    try:
+        while True:
+            message = await websocket.receive_text()
+            peer = relais_connexions.get(token, {}).get(autre_role)
+            if peer is not None:
+                try:
+                    await peer.send_text(message)
+                except Exception:
+                    pass
+    except WebSocketDisconnect:
+        pass
+    finally:
+        if token in relais_connexions and relais_connexions[token].get(role) is websocket:
+            relais_connexions[token][role] = None
