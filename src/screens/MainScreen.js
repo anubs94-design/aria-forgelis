@@ -45,7 +45,7 @@ import {
   arreterEcoute,
 } from "../services/MicroService";
 import { StorageService } from "../services/StorageService";
-import { prendrePhotoDocument, analyserDocument, demanderAideReponse } from "../services/DocumentService";
+import { prendrePhotoDocument, analyserDocument, demanderAideReponse, decrireImage } from "../services/DocumentService";
 
 const SERVER_HOST = "192.168.1.31";
 const SERVER_PORT = 8765;
@@ -62,6 +62,8 @@ export default function MainScreen() {
   const [explicationDocument, setExplicationDocument] = useState(null);
   const [reponseDocument, setReponseDocument] = useState(null);
   const [analyseReponseEnCours, setAnalyseReponseEnCours] = useState(false);
+  const [descriptionImage, setDescriptionImage] = useState(null);
+  const [descriptionEnCours, setDescriptionEnCours] = useState(false);
   const [analyseEnCours, setAnalyseEnCours] = useState(false);
   const [voixActive, setVoixActive] = useState(true);
   const [vocalActif, setVocalActif] = useState(true);
@@ -299,6 +301,21 @@ export default function MainScreen() {
 
         <TouchableOpacity style={styles.secondaryButton} onPress={prendrePhoto}>
           <Text style={styles.secondaryButtonText}>Photographier un document</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.secondaryButton} onPress={async () => {
+            setDescriptionImage(null);
+            setExplicationDocument(null);
+            setReponseDocument(null);
+            setDescriptionEnCours(true);
+            const photo = await prendrePhotoDocument(addLog);
+            if (photo) {
+              const desc = await decrireImage(photo.base64, addLog);
+              if (desc) setDescriptionImage(desc);
+            }
+            setDescriptionEnCours(false);
+          }}>
+            <Text style={styles.secondaryButtonText}>{descriptionEnCours ? "Aria regarde..." : "Decrire une image"}</Text>
           <Text style={styles.secondaryButtonSub}>Aria le lit et vous l'explique</Text>
         </TouchableOpacity>
 
@@ -429,6 +446,19 @@ export default function MainScreen() {
                 </TouchableOpacity>
               ))}
             </View>
+          )}
+
+          {descriptionImage && (
+              <View style={styles.explicationContainer}>
+                <Text style={styles.explicationTitle}>Aria decrit :</Text>
+                <Text style={styles.explicationText}>{descriptionImage}</Text>
+                <TouchableOpacity
+                  style={{backgroundColor: "#FF7A59", borderRadius: 10, paddingVertical: 10, alignItems: "center", marginTop: 10}}
+                  onPress={() => { setDescriptionImage(null); addLog("Description effacee."); }}
+                >
+                  <Text style={{color: "#F0F3FB", fontWeight: "bold", fontSize: 13}}>Fermer</Text>
+                </TouchableOpacity>
+              </View>
           )}
 
           {pendingContext && (

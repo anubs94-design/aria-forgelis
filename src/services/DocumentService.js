@@ -218,3 +218,57 @@ export async function demanderAideReponse(base64, explicationPrecedente, addLog)
     return null;
   }
 }
+
+// === DECRIRE IMAGE (malvoyants) ===
+const PROMPT_DECRIRE_IMAGE =
+  "Tu es Aria, assistante vocale pour seniors et personnes malvoyantes. " +
+  "L'utilisateur te montre une photo et a besoin que tu DECRIVES ce que tu vois.\n\n" +
+  "TON ROLE :\n" +
+  "1. Decris l'image de facon claire, detaillee et vivante.\n" +
+  "2. Si c'est une photo de personnes, decris combien il y en a, leur apparence generale, leurs vetements, leurs expressions.\n" +
+  "3. Si c'est un lieu, decris l'environnement, les couleurs, l'ambiance.\n" +
+  "4. Si c'est un objet, decris sa forme, sa couleur, son etat.\n" +
+  "5. Si c'est du texte (etiquette, panneau, ecran), LIS-LE a voix haute.\n\n" +
+  "Reponds TOUJOURS en francais, chaleureux et clair. Sois precis mais pas trop long (5-8 phrases).";
+
+export async function decrireImage(base64, addLog) {
+  try {
+    if (addLog) addLog("Aria regarde l'image...");
+
+    const payload = {
+      model: "claude-sonnet-4-6",
+      max_tokens: 1024,
+      system: [{ type: "text", text: PROMPT_DECRIRE_IMAGE }],
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "image",
+              source: { type: "base64", media_type: "image/jpeg", data: base64 },
+            },
+            { type: "text", text: "Decris-moi cette image en detail." },
+          ],
+        },
+      ],
+    };
+
+    const response = await fetch(PROXY_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: PROXY_TOKEN, payload }),
+    });
+
+    const data = await response.json();
+    if (data.erreur) { if (addLog) addLog("Erreur Aria: " + data.erreur); return null; }
+
+    const texte = data.content && data.content[0] && data.content[0].text ? data.content[0].text : null;
+    if (!texte) { if (addLog) addLog("Reponse vide."); return null; }
+
+    if (addLog) addLog("Aria a decrit l'image.");
+    return texte;
+  } catch (e) {
+    if (addLog) addLog("Erreur description: " + e.message);
+    return null;
+  }
+}
