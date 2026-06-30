@@ -200,7 +200,9 @@ export function sendTask(socket, status, taskText, pendingContext, onLog) {
     if (pendingContext) {
       finalTask = "Contexte precedent : tu as demande \"" + pendingContext + "\"\nReponse de l'utilisateur : " + taskText.trim();
     }
-    const msg = { type: "task", task: finalTask };
+    const maintenant = new Date();
+    const heureLocale = maintenant.toLocaleString("fr-FR", {weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit"});
+    const msg = { type: "task", task: finalTask, heure_locale: heureLocale };
     socket.send(JSON.stringify(msg));
     onLog("Tache envoyee: " + taskText.trim());
     return true;
